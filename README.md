@@ -7,6 +7,8 @@ To get started playing with this, we recommend popping Flat_Moloch_v2.1.sol into
 
 Kovan Deployment: 0x9c5d087f912e7187D9c75e90999b03FB31Ee17f5
 
+Matic Deployment: 0x12133615eE841F1309B3d2E374ba2Dbf549DF723
+
 xDAI Deployment: 0x0F50B2F3165db96614fbB6E4262716acc9F9e098
 
 Rinkeby Deployment: 0xC33a4EfecB11D2cAD8E7d8d2a6b5E7FEacCC521d

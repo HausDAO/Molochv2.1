@@ -232,6 +232,22 @@ contract Moloch is ReentrancyGuard {
         require(members[memberAddressByDelegateKey[msg.sender]].shares > 0, "not a delegate");
         _;
     }
+    
+    function initSharesAndLoot(
+        address[] memory _summoner,
+        uint256[] memory _summonerShares,
+        uint256[] memory _summonerLoot
+        ) internal {
+            for (uint256 i = 0; i < _summoner.length; i++) {
+                require(_summoner[i] != address(0), "summoner cannot be 0");
+               members[_summoner[i]] = Member(_summoner[i], _summonerShares[i], _summonerLoot[i], true, 0, 0);
+               memberAddressByDelegateKey[_summoner[i]] = _summoner[i];
+               totalShares = totalShares.add(_summonerShares[i]);
+               totalLoot = totalLoot.add(_summonerLoot[i]);
+          }
+          require(totalShares + totalLoot <= MAX_NUMBER_OF_SHARES_AND_LOOT, "too many shares and loot requested");
+        }
+        
 
     function init(
         address[] calldata _summoner,
@@ -242,10 +258,12 @@ contract Moloch is ReentrancyGuard {
         uint256 _proposalDeposit,
         uint256 _dilutionBound,
         uint256 _processingReward,
-        uint256[] calldata _summonerShares
+        uint256[] calldata _summonerShares,
+        uint256[] calldata _summonerLoot
     ) external {
         require(!initialized, "initialized");
         require(_summoner.length == _summonerShares.length, "summoner length mismatches summonerShares");
+        require(_summoner.length == _summonerLoot.length, "summoner length mismatches summonerLoot");
         require(_periodDuration > 0, "_periodDuration cannot be 0");
         require(_votingPeriodLength > 0, "_votingPeriodLength cannot be 0");
         require(_votingPeriodLength <= MAX_VOTING_PERIOD_LENGTH, "_votingPeriodLength exceeds limit");
@@ -257,15 +275,9 @@ contract Moloch is ReentrancyGuard {
         require(_proposalDeposit >= _processingReward, "_proposalDeposit cannot be smaller than _processingReward");
         
         depositToken = _approvedTokens[0];
-      
-        for (uint256 i = 0; i < _summoner.length; i++) {
-            require(_summoner[i] != address(0), "summoner cannot be 0");
-            members[_summoner[i]] = Member(_summoner[i], _summonerShares[i], 0, true, 0, 0);
-            memberAddressByDelegateKey[_summoner[i]] = _summoner[i];
-            totalShares = totalShares.add(_summonerShares[i]);
-        }
         
-        require(totalShares <= MAX_NUMBER_OF_SHARES_AND_LOOT, "too many shares requested");
+        initSharesAndLoot(_summoner, _summonerShares, _summonerLoot);
+        
 
         for (uint256 i = 0; i < _approvedTokens.length; i++) {
             require(_approvedTokens[i] != address(0), "_approvedToken cannot be 0");
@@ -873,7 +885,8 @@ contract MolochSummoner is CloneFactory {
         template = _template;
     }
     
-    event SummonComplete(address indexed moloch, address[] summoner, address[] tokens, uint256 summoningTime, uint256 periodDuration, uint256 votingPeriodLength, uint256 gracePeriodLength, uint256 proposalDeposit, uint256 dilutionBound, uint256 processingReward, uint256[] summonerShares);
+    event SummonComplete(address indexed moloch, address[] tokens, uint256 summoningTime, uint256 periodDuration, uint256 votingPeriodLength, uint256 gracePeriodLength, uint256 proposalDeposit, uint256 dilutionBound, uint256 processingReward);
+    event SummonerInitComplete(address indexed moloch, address[] summoner, uint256[] summonerShares, uint256[] summonerLoot);
     event Register(uint daoIdx, address moloch, string title, string http, uint version);
      
     function summonMoloch(
@@ -885,7 +898,8 @@ contract MolochSummoner is CloneFactory {
         uint256 _proposalDeposit,
         uint256 _dilutionBound,
         uint256 _processingReward,
-        uint256[] memory _summonerShares
+        uint256[] memory _summonerShares,
+        uint256[] memory _summonerLoot
     ) public returns (address) {
         Moloch moloch = Moloch(createClone(template));
         
@@ -898,10 +912,12 @@ contract MolochSummoner is CloneFactory {
             _proposalDeposit,
             _dilutionBound,
             _processingReward,
-            _summonerShares
+            _summonerShares,
+            _summonerLoot
         );
        
-        emit SummonComplete(address(moloch), _summoner, _approvedTokens, now, _periodDuration, _votingPeriodLength, _gracePeriodLength, _proposalDeposit, _dilutionBound, _processingReward, _summonerShares);
+        emit SummonComplete(address(moloch),  _approvedTokens, now, _periodDuration, _votingPeriodLength, _gracePeriodLength, _proposalDeposit, _dilutionBound, _processingReward);
+        emit SummonerInitComplete(address(moloch), _summoner, _summonerShares, _summonerLoot);
         
         return address(moloch);
     }
